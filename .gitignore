@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Model Weights
+*.pth
+*.pt
+
+# Results
+results/*.pth
+results/*.pt
+results/*.png
+results/*.jpg
+
+# Dataset
+dataset/raw/
+dataset/processed/
+
+# Python cache
+.pytest_cache/
+.mypy_cache/
+
+# Build
+build/
+dist/
+
+# Environment variables
+.env
