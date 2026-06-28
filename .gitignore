@@ -1,9 +1,8 @@
 # Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
 *.so
+*.egg-info/
 
 # Virtual Environment
 .venv/
@@ -16,33 +15,17 @@ env/
 # VS Code
 .vscode/
 
-# macOS
-.DS_Store
+# Matplotlib
+.matplotlib/
 
-# Logs
-*.log
-
-# Model Weights
-*.pth
-*.pt
-
-# Results
-results/*.pth
-results/*.pt
-results/*.png
-results/*.jpg
-
-# Dataset
+# Dataset (Large Files)
 dataset/raw/
 dataset/processed/
 
-# Python cache
-.pytest_cache/
-.mypy_cache/
+# Model Checkpoints
+results/*.pth
 
-# Build
-build/
-dist/
 
-# Environment variables
-.env
+# OS Files
+.DS_Store
+Thumbs.db

@@ -1,39 +1,35 @@
+"""Model utilities for ResNet18 transfer learning."""
 
-# Model Utilities
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
 
 import torch
-from tqdm import tqdm
-from torchvision import models
 from torch import nn
+from torchvision import models
+
+try:
+    from train import train_model
+except ImportError:  # pragma: no cover - package import fallback
+    from .train import train_model
 
 
-def build_model(num_classes=2):
-    """
-    Load a pre-trained ResNet18 model and replace
-    the final classification layer.
-    """
+def build_model(
+    num_classes: int = 2,
+    pretrained: bool = True,
+) -> nn.Module:
+    """Build a ResNet18 classifier with a replaced final layer."""
 
-    model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
-
+    weights = models.ResNet18_Weights.DEFAULT if pretrained else None
+    model = models.resnet18(weights=weights)
     in_features = model.fc.in_features
-
-    model.fc = nn.Linear(
-        in_features,
-        num_classes,
-    )
-
+    model.fc = nn.Linear(in_features, num_classes)
     return model
 
 
-
-
-# Transfer Learning Utilities
-
-def freeze_feature_extractor(model):
-    """
-    Freeze all convolutional layers except
-    the final fully connected layer.
-    """
+def freeze_feature_extractor(model: nn.Module) -> nn.Module:
+    """Freeze all layers except the final fully connected classifier."""
 
     for parameter in model.parameters():
         parameter.requires_grad = False
@@ -44,106 +40,40 @@ def freeze_feature_extractor(model):
     return model
 
 
-# Training
+def unfreeze_model(model: nn.Module) -> nn.Module:
+    """Unfreeze every model parameter for fine-tuning."""
 
-def train_model(
-    model,
-    train_loader,
-    valid_loader,
-    criterion,
-    optimizer,
-    device,
-    epochs=5,
-):
-    """
-    Train the model and monitor validation performance.
-    """
+    for parameter in model.parameters():
+        parameter.requires_grad = True
 
-    history = {
-        "train_loss": [],
-        "train_acc": [],
-        "valid_loss": [],
-        "valid_acc": [],
-    }
+    return model
 
-    for epoch in range(epochs):
 
-        # Training
-        
-        model.train()
+def count_parameters(model: nn.Module) -> dict[str, int]:
+    """Count total and trainable model parameters."""
 
-        running_loss = 0.0
-        correct = 0
-        total = 0
+    total = sum(parameter.numel() for parameter in model.parameters())
+    trainable = sum(
+        parameter.numel()
+        for parameter in model.parameters()
+        if parameter.requires_grad
+    )
 
-        for images, labels in train_loader:
+    return {"total": total, "trainable": trainable}
 
-            images = images.to(device)
-            labels = labels.to(device)
 
-            optimizer.zero_grad()
+def load_checkpoint(
+    model: nn.Module,
+    checkpoint_path: Path | str,
+    device: torch.device | str,
+) -> dict[str, Any]:
+    """Load model weights from a checkpoint file."""
 
-            outputs = model(images)
+    checkpoint = torch.load(checkpoint_path, map_location=device)
 
-            loss = criterion(outputs, labels)
+    if "model_state_dict" in checkpoint:
+        model.load_state_dict(checkpoint["model_state_dict"])
+        return checkpoint.get("metadata", {})
 
-            loss.backward()
-
-            optimizer.step()
-
-            running_loss += loss.item() * images.size(0)
-
-            predictions = outputs.argmax(dim=1)
-
-            correct += (predictions == labels).sum().item()
-
-            total += labels.size(0)
-
-        train_loss = running_loss / total
-        train_acc = correct / total
-
-        
-        # Validation
-        
-        model.eval()
-
-        running_loss = 0.0
-        correct = 0
-        total = 0
-
-        with torch.no_grad():
-
-            for images, labels in valid_loader:
-
-                images = images.to(device)
-                labels = labels.to(device)
-
-                outputs = model(images)
-
-                loss = criterion(outputs, labels)
-
-                running_loss += loss.item() * images.size(0)
-
-                predictions = outputs.argmax(dim=1)
-
-                correct += (predictions == labels).sum().item()
-
-                total += labels.size(0)
-
-        valid_loss = running_loss / total
-        valid_acc = correct / total
-
-        history["train_loss"].append(train_loss)
-        history["train_acc"].append(train_acc)
-        history["valid_loss"].append(valid_loss)
-        history["valid_acc"].append(valid_acc)
-
-        print(
-            f"Epoch [{epoch + 1}/{epochs}] | "
-            f"Train Loss: {train_loss:.4f} | "
-            f"Train Acc: {train_acc:.4f} | "
-            f"Valid Loss: {valid_loss:.4f} | "
-            f"Valid Acc: {valid_acc:.4f}"
-        )
-
-    return history
+    model.load_state_dict(checkpoint)
+    return {}
